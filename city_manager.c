@@ -117,8 +117,7 @@ void command_list(char *district_id)
     get_permissions_string(st.st_mode, perm_str);
 
     printf("File information for: %s\n", path);
-    printf("Permissions: %s\n / Size: %ld bytes / Last modified: %s\n\n", perm_str, (long)st.st_size, (long)st.st_size, ctime(&st.st_size));
-
+    printf("Permissions: %s / Size: %ld bytes / Last modified: %s", perm_str, (long)st.st_size, ctime(&st.st_mtime));
     int fd = open(path, O_RDONLY);
     if(fd < 0)
     {
@@ -128,8 +127,8 @@ void command_list(char *district_id)
     Raport r;
     while(read(fd, &r, sizeof(Raport)) == sizeof(Raport))
     {
-        printf("ID: %d / Inspector: %s / Cat: %s / Sev: %d\n", r.ID, r.inspectorName, r.description, r.severity);
-        printf("Coord: (%.2f, %.2f) | Time: %s", r.latitude, r.longitude, r.timestamp);
+        printf("ID: %d / Inspector: %s / Cat: %s / Sev: %d\n", r.ID, r.inspectorName, r.category, r.severity);
+        printf("Coord: (%.2f, %.2f) | Time: %s", r.latitude, r.longitude, ctime(&r.timestamp));
         printf("Description: %s\n", r.description);
     }
 
@@ -183,7 +182,7 @@ int main(int argc, char *argv[])
 
     if(strcmp(command, "--add") == 0)
     {
-        if(arg_index + 1 > argc)
+        if(arg_index + 1 >= argc)
         {
             fprintf(stderr, "Lipseste district ID!");
             exit(-1);
@@ -193,7 +192,7 @@ int main(int argc, char *argv[])
     }
     else if(strcmp(command, "--list") == 0)
     {
-        if(arg_index + 1 > argc)
+        if(arg_index + 1 >= argc)
         {
             fprintf(stderr, "Lipseste district ID!");
             exit(-1);
