@@ -50,17 +50,13 @@ void command_add(char *district_id, char *role, char *user)
     strcpy(r.inspectorName, user);
     r.timestamp = time(NULL);
 
-    printf("X (Latitudine): ");
-    scanf("%f", &r.latitude);
+    r.latitude = (float)(rand() % 90);
+    r.longitude = (float)(rand() % 180);
 
-    printf("Y (Longitudine): ");
-    scanf("%f", &r.longitude);
+    char *categories[] = {"road", "lighting", "flooding", "other"};
+    strcpy(r.category, categories[rand() % 4]);
 
-    printf("Category (road/lighting/flooding/other): ");
-    scanf("%s", r.category);
-
-    printf("Severity level (1-minor, 2-moderate, 3-critical): ");
-    scanf("%d", &r.severity);
+    r.severity = (rand() % 3) + 1;
 
     printf("Description: "); getchar();
     fgets(r.description, description_len, stdin);
@@ -86,6 +82,7 @@ void command_add(char *district_id, char *role, char *user)
 
 int main(int argc, char *argv[])
 {
+    srand(time(NULL));
     char *role = NULL;
     char *user = NULL;
     char *command = NULL;
