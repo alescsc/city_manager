@@ -1,7 +1,11 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #define name_len 50
 #define category_len 25
@@ -18,6 +22,29 @@ typedef struct
     char description[description_len];
 } Raport;
 
+void command_add(char *district_id, char *role, char *user)
+{
+    struct stat st = {0};
+    if(stat(district_id, &st) == -1) // verificam daca exista directorul
+    {
+        if(mkdir(district_id, 0750) == -1) // creez directorul
+        {
+            fprintf(stderr, "Eroare la crearea directorului!");
+            exit(-1);
+        }
+        if(chmod(district_id, 0750) == -1) // setez permisiunile
+        {
+            fprintf(stderr, "Eroare la chmod directorului!");
+            exit(-1);
+        }
+        printf("Directorul %s a fost creat cu succes!\n", district_id);
+    }
+    else
+    {
+        printf("Directorul %s exista deja!\n", district_id);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     char *role = NULL;
@@ -25,7 +52,7 @@ int main(int argc, char *argv[])
     char *command = NULL;
     int arg_index;
 
-    for(int i = 0; i < argc; i++)
+    for(int i = 1; i < argc; i++)
     {
         if(strcmp(argv[i], "--role") == 0)
         {
@@ -70,6 +97,7 @@ int main(int argc, char *argv[])
             exit(-1);
         }
         char *ID = argv[arg_index + 1];
+        command_add(ID, role, user);
     }
     return 0;
 }
