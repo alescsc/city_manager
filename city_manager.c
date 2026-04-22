@@ -43,6 +43,27 @@ void command_add(char *district_id, char *role, char *user)
     {
         printf("Directorul %s exista deja!\n", district_id);
     }
+
+    Raport r;
+    r.ID = 1;
+    strcpy(r.inspectorName, district_id);
+    r.timestamp = time(NULL);
+
+    printf("X (Latitudine): ");
+    scanf("%f", &r.latitude);
+
+    printf("Y (Longitudine): ");
+    scanf("%f", &r.longitude);
+
+    printf("Category (road/lighting/flooding/other): ");
+    scanf("%s", r.category);
+
+    printf("Severity level (1-minor, 2-moderate, 3-critical): ");
+    scanf("%d", &r.severity);
+
+    printf("Description: "); getchar();
+    fgets(r.description, description_len, stdin);
+    r.description[strlen(r.description) - 1] = '\0';
 }
 
 int main(int argc, char *argv[])
