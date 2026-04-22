@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #define name_len 50
 #define category_len 25
@@ -46,7 +47,7 @@ void command_add(char *district_id, char *role, char *user)
 
     Raport r;
     r.ID = 1;
-    strcpy(r.inspectorName, district_id);
+    strcpy(r.inspectorName, user);
     r.timestamp = time(NULL);
 
     printf("X (Latitudine): ");
@@ -64,6 +65,23 @@ void command_add(char *district_id, char *role, char *user)
     printf("Description: "); getchar();
     fgets(r.description, description_len, stdin);
     r.description[strlen(r.description) - 1] = '\0';
+
+    char path[512];
+    snprintf(path, 512, "%s/reports.dat", district_id); // cale spre fisierul reports.dat
+
+    int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0664);
+    if(fd < 0)
+    {
+        fprintf(stderr, "Eroare la deschiderea reports.dat!");
+        exit(-1);
+    }
+    chmod(path, 0664);
+    if(write(fd, &r, sizeof(Raport)) != sizeof(Raport))
+        fprintf(stderr, "Eroare la scrierea in fisier!");
+    else
+        printf("Raportul a fost salvat cu succes in %s.\n", path);
+
+    close(fd);
 }
 
 int main(int argc, char *argv[])
