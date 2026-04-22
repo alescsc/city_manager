@@ -80,6 +80,62 @@ void command_add(char *district_id, char *role, char *user)
     close(fd);
 }
 
+void get_permissions_string(mode_t mode, char *str)
+{
+    strcpy(str, "---------");
+    // permisiuni owner
+    if (mode & S_IRUSR) str[0] = 'r';
+    if (mode & S_IWUSR) str[1] = 'w';
+    if (mode & S_IXUSR) str[2] = 'x';
+
+    // permisiuni grup
+    if (mode & S_IRGRP) str[3] = 'r';
+    if (mode & S_IWGRP) str[4] = 'w';
+    if (mode & S_IXGRP) str[5] = 'x';
+
+    // others
+    if (mode & S_IROTH) str[6] = 'r';
+    if (mode & S_IWOTH) str[7] = 'w';
+    if (mode & S_IXOTH) str[8] = 'x';
+
+    str[9] = '\0';
+}
+
+void command_list(char *district_id)
+{
+    char path[512];
+    snprintf(path, 512, "%s/reports.dat", district_id); // cale spre fisierul reports.dat
+
+    struct stat st = {0};
+    if(stat(path, &st) == -1)
+    {
+        fprintf(stderr, "Eroare la deschiderea reports.dat!");
+        exit(-1);
+    }
+
+    char perm_str[11];
+    get_permissions_string(st.st_mode, perm_str);
+
+    printf("File information for: %s\n", path);
+    printf("Permissions: %s\n / Size: %ld bytes / Last modified: %s\n\n", perm_str, (long)st.st_size, (long)st.st_size, ctime(&st.st_size));
+
+    int fd = open(path, O_RDONLY);
+    if(fd < 0)
+    {
+        fprintf(stderr, "Eroare la deschiderea fisierului!");
+        exit(-1);
+    }
+    Raport r;
+    while(read(fd, &r, sizeof(Raport)) == sizeof(Raport))
+    {
+        printf("ID: %d / Inspector: %s / Cat: %s / Sev: %d\n", r.ID, r.inspectorName, r.description, r.severity);
+        printf("Coord: (%.2f, %.2f) | Time: %s", r.latitude, r.longitude, r.timestamp);
+        printf("Description: %s\n", r.description);
+    }
+
+    close(fd);
+}
+
 int main(int argc, char *argv[])
 {
     srand(time(NULL));
@@ -134,6 +190,15 @@ int main(int argc, char *argv[])
         }
         char *ID = argv[arg_index + 1];
         command_add(ID, role, user);
+    }
+    else if(strcmp(command, "--list") == 0)
+    {
+        if(arg_index + 1 > argc)
+        {
+            fprintf(stderr, "Lipseste district ID!");
+            exit(-1);
+        }
+        command_list(argv[arg_index + 1]);
     }
     return 0;
 }
