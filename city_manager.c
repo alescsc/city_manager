@@ -116,7 +116,7 @@ void command_list(char *district_id)
     get_permissions_string(st.st_mode, perm_str);
 
     printf("\n");
-    printf("> File information for: %s\n <", path);
+    printf("> File information for: %s < \n", path);
     printf("Permissions: %s | Size: %ld bytes | Last modified: %s", perm_str, (long)st.st_size, ctime(&st.st_mtime));
     int fd = open(path, O_RDONLY);
     if(fd < 0)
@@ -130,6 +130,7 @@ void command_list(char *district_id)
         printf("ID: %d | Inspector: %s | Cat: %s | Sev: %d\n", r.ID, r.inspectorName, r.category, r.severity);
         printf("Coord: (%.2f, %.2f) | Time: %s", r.latitude, r.longitude, ctime(&r.timestamp));
         printf("Description: %s\n", r.description);
+        printf("\n");
     }
 
     close(fd);
