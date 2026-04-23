@@ -378,6 +378,63 @@ void command_remove_report(char *district_id, int report_id, char *role, char *u
     }
 }
 
+void command_update_threshold(char *district_id, int new_threshold, char *role, char *user)
+{
+    if(strcmp(role, "manager") != 0)
+    {
+        fprintf(stderr, "Eroare: Doar managerul poate sa actualizeze pragul de threshold!\n");
+        exit(-1);
+    }
+
+    if(new_threshold < 1 || new_threshold > 3)
+    {
+        fprintf(stderr, "Eroare: Pragul de threshold trebuie sa fie intre 1 si 3!\n");
+        exit(-1);
+    }
+
+    char cfg_path[512];
+    snprintf(cfg_path, 512, "%s/district.cfg", district_id);
+
+    struct stat st = {0};
+    if(stat(cfg_path, &st) == -1)
+    {
+        fprintf(stderr, "Eroare: Fisierul district.cfg nu exista in districtul %s!\n", district_id);
+        exit(-1);
+    }
+    if(check_permission(st.st_mode, role, 'W') == 0)
+    {
+        fprintf(stderr, "Eroare: Rolul %s nu are permisiune de a scrie in district.cfg!\n", role);
+        exit(-1);
+    }
+
+    int fd_cfg = open(cfg_path, O_WRONLY | O_TRUNC);
+    if(fd_cfg < 0)
+    {
+        fprintf(stderr, "Eroare: Deschiderea fiserului district.cfg a esuat!\n");
+        exit(-1);
+    }
+
+    char threshold_str[10];
+    snprintf(threshold_str, sizeof(threshold_str), "%d\n", new_threshold);
+    if(write(fd_cfg, threshold_str, strlen(threshold_str)) == - 1)
+        fprintf(stderr, "Eroare: Scrierea noului prag a esuat!\n");
+    else
+        printf("Info: Pragul pentru districtul %s a fost actualizat la %d!\n", district_id, new_threshold);
+
+    close(fd_cfg);
+
+    char log_path[512];
+    snprintf(log_path, 512, "%s/logged_district", district_id);
+    int fd_log = open(log_path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if(fd_log >= 0)
+    {
+        char log_entry[256];
+        snprintf(log_entry, sizeof(log_entry), "%ld\n%s\n%s update_threshold %d\n", (long)time(NULL), user, role, new_threshold);
+        write(fd_log, log_entry, strlen(log_entry));
+        close(fd_log);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     srand(time(NULL));
@@ -463,6 +520,17 @@ int main(int argc, char *argv[])
         char *ID = argv[arg_index + 1];
         int report_id = atoi(argv[arg_index + 2]);
         command_remove_report(ID, report_id, role, user);
+    }
+    else if(strcmp(command, "--update_threshold") == 0)
+    {
+        if(arg_index + 2 >= argc)
+        {
+            fprintf(stderr, "Eroare: Lipseste district ID si noul prag!");
+            exit(-1);
+        }
+        char *ID = argv[arg_index + 1];
+        int valoare = atoi(argv[arg_index + 2]);
+        command_update_threshold(ID, valoare, role, user);
     }
     return 0;
 }
