@@ -103,20 +103,20 @@ void command_add(char *district_id, char *role, char *user)
     {
         if(strcmp(role, "manager") != 0)
         {
-            fprintf(stderr, "Eroare: Cartierul %s nu exista! Doar un manager poate crea fisierele .cfg si .log!!!!", district_id);
+            fprintf(stderr, "Eroare: Cartierul %s nu exista! Doar un manager poate crea fisierele .cfg si .log!", district_id);
             exit(-1);
         }
         if(mkdir(district_id, 0750) == -1) // creez directorul
         {
-            fprintf(stderr, "Eroare la crearea directorului!");
+            fprintf(stderr, "Eroare: Crearea directorului!");
             exit(-1);
         }
         if(chmod(district_id, 0750) == -1) // setez permisiunile
         {
-            fprintf(stderr, "Eroare la chmod directorului!");
+            fprintf(stderr, "Eroare: chmod pe director!");
             exit(-1);
         }
-        printf("Directorul %s a fost creat cu succes!\n", district_id);
+        printf("Info: Directorul %s a fost creat cu succes!\n", district_id);
 
         char cfg_path[512]; // implementam si district.cfg
         snprintf(cfg_path, 512, "%s/district.cfg", district_id);
@@ -128,12 +128,12 @@ void command_add(char *district_id, char *role, char *user)
             write(fd_cfg, default_threshold, strlen(default_threshold));
             close(fd_cfg);
             chmod(cfg_path, 0640);
-            printf("Fisierul district.cfg a fost creat!\n");
+            printf("Info: Fisierul district.cfg a fost creat!\n");
         }
     }
     else
     {
-        printf("Directorul %s exista deja!\n", district_id);
+        printf("Info: Directorul %s exista deja!\n", district_id);
     }
 
     Raport r;
@@ -160,7 +160,7 @@ void command_add(char *district_id, char *role, char *user)
     {
         if(check_permission(file_st.st_mode, role, 'W') == 0)
         {
-            fprintf(stderr, "Rolul %s nu are permisiunea de a scrie in reports.dat!\n", role);
+            fprintf(stderr, "Eroare: Rolul %s nu are permisiunea de a scrie in reports.dat!\n", role);
             exit(-1);
         }
         r.ID = (file_st.st_size / sizeof(Raport)) + 1; // daca exista calculam ID automat
@@ -171,14 +171,14 @@ void command_add(char *district_id, char *role, char *user)
     int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0664);
     if(fd < 0)
     {
-        fprintf(stderr, "Eroare la deschiderea reports.dat!");
+        fprintf(stderr, "Eroare: Deschiderea reports.dat!");
         exit(-1);
     }
     chmod(path, 0664);
     if(write(fd, &r, sizeof(Raport)) != sizeof(Raport))
-        fprintf(stderr, "Eroare la scrierea in fisier!");
+        fprintf(stderr, "Eroare: Scriere in fisier!");
     else
-        printf("Raportul a fost salvat cu succes in %s.\n", path);
+        printf("Info: Raportul a fost salvat cu succes in %s.\n", path);
 
     close(fd);
 
@@ -191,7 +191,7 @@ void command_add(char *district_id, char *role, char *user)
     {
         if(check_permission(log_st.st_mode, role, 'W') == 0) // verificam permisiunea de scriere
         {
-            fprintf(stderr, "Rolul %s nu are permisiune de a scrie in fisierul logged_district!", role);
+            fprintf(stderr, "Eroare: Rolul %s nu are permisiune de a scrie in fisierul logged_district!", role);
             return;
         }
     }
@@ -199,7 +199,7 @@ void command_add(char *district_id, char *role, char *user)
     {    //daca nu exista fisierul log, doar un manager il poate crea
         if(strcmp(role, "manager") != 0)
         {
-            fprintf(stderr, "Rolul %s nu are permisiune de a scrie in fisierul logged_district!", role);
+            fprintf(stderr, "Eroare: Rolul %s nu are permisiune de a scrie in fisierul logged_district!", role);
             return;
         }
     }
@@ -222,13 +222,13 @@ void command_list(char *district_id, char *role)
     struct stat st = {0};
     if(stat(path, &st) == -1)
     {
-        fprintf(stderr, "Eroare la deschiderea reports.dat!");
+        fprintf(stderr, "Eroare: Deschiderea reports.dat!");
         exit(-1);
     }
 
     if(check_permission(st.st_mode, role, 'R') == 0)
     {
-        fprintf(stderr, "Rolul %s nu are dreptul de a citi rapoartele (--list)!\n", role);
+        fprintf(stderr, "Eroare: Rolul %s nu are dreptul de a citi rapoartele (--list)!\n", role);
         exit(-1);
     }
     char perm_str[11];
@@ -240,7 +240,7 @@ void command_list(char *district_id, char *role)
     int fd = open(path, O_RDONLY);
     if(fd < 0)
     {
-        fprintf(stderr, "Eroare la deschiderea fisierului!");
+        fprintf(stderr, "Eroare: Deschiderea fisierului!");
         exit(-1);
     }
     Raport r;
@@ -262,32 +262,32 @@ void command_view(char *district_id, int report_id, char *role)
     struct stat st = {0};
     if(stat(path, &st) == -1)
     {
-        fprintf(stderr, "Eroare la deschiderea reports.dat!");
+        fprintf(stderr, "Eroare: Deschiderea reports.dat!");
         exit(-1);
     }
 
     if(check_permission(st.st_mode, role, 'R') == 0) // verificam daca are permisiune
     {
-        fprintf(stderr, "Rolul %s nu are dreptul de a citi rapoarte! (--view)!\n", role);
+        fprintf(stderr, "Eroare: Rolul %s nu are dreptul de a citi rapoarte! (--view)!\n", role);
         exit(-1);
     }
 
     if(report_id <= 0 || (report_id * sizeof(Raport)) > st.st_size) // verificam daca raportul exista
     {
-        fprintf(stderr, "Eroare, raportul cu ID %d nu exista in districtul %s\n", report_id, district_id);
+        fprintf(stderr, "Eroare: Raportul cu ID %d nu exista in districtul %s\n", report_id, district_id);
         exit(-1);
     }
     int fd = open(path, O_RDONLY); // verificam daca s a deschis cum trebuie
     if(fd < 0)
     {
-        fprintf(stderr, "Eroare la deschiderea reports.dat!");
+        fprintf(stderr, "Eroare: Deschiderea reports.dat!");
         exit(-1);
     }
 
     off_t offset = (report_id - 1) * sizeof(Raport); // calculam offest in fisier
     if(lseek(fd, offset, SEEK_SET) == (off_t)-1) // verificam daca s a pus cursorul bine
     {
-        fprintf(stderr, "Eroare la lseek!\n");
+        fprintf(stderr, "Eroare: lseek!\n");
         close(fd);
         exit(-1);
     }
@@ -305,7 +305,7 @@ void command_view(char *district_id, int report_id, char *role)
         printf("\n\n");
     }
     else
-        fprintf(stderr, "Eroare la citirea raportului!\n");
+        fprintf(stderr, "Eroare: Citirea raportului!\n");
     close(fd);
 }
 
@@ -313,7 +313,7 @@ void command_remove_report(char *district_id, int report_id, char *role, char *u
 {
     if(strcmp(role, "manager") != 0)
     {
-        fprintf(stderr, "Acces respins: doar managerul poate sa stearga rapoarte!\n");
+        fprintf(stderr, "Eroare: Doar managerul poate sa stearga rapoarte!\n");
         exit(-1);
     }
 
@@ -322,26 +322,26 @@ void command_remove_report(char *district_id, int report_id, char *role, char *u
     struct stat st = {0};
     if(stat(path, &st) == -1)
     {
-        fprintf(stderr, "Eroare la deschiderea reports.dat!");
+        fprintf(stderr, "Eroare: Deschiderea reports.dat!");
         exit(-1);
     }
 
     if(check_permission(st.st_mode, role, 'W') == 0)
     {
-        fprintf(stderr, "Rolul %s nu are permisiune de a scrie in reports.dat!\n", role);
+        fprintf(stderr, "Eroare: Rolul %s nu are permisiune de a scrie in reports.dat!\n", role);
         exit(-1);
     }
 
     if(report_id <= 0 || (report_id * sizeof(Raport)) > st.st_size)
     {
-        fprintf(stderr, "Raportul cu ID %d nu exista!\n", report_id);
+        fprintf(stderr, "Eroare: Raportul cu ID %d nu exista!\n", report_id);
         exit(-1);
     }
 
     int fd = open(path, O_RDWR);
     if(fd < 0)
     {
-        fprintf(stderr, "Eroare la deschiderea reports.dat!");
+        fprintf(stderr, "Eroare: Deschiderea reports.dat!");
         exit(-1);
     }
 
@@ -358,11 +358,11 @@ void command_remove_report(char *district_id, int report_id, char *role, char *u
     off_t new_size = (total_reports - 1) * sizeof(Raport);
     if(ftruncate(fd, new_size) == -1)
     {
-        fprintf(stderr, "Eroare la trunchierea fisierului!\n");
+        fprintf(stderr, "Eroare: Trunchierea fisierului!\n");
         close(fd);
         exit(-1);
     }
-    printf("Raportul %d a fost sters cu succes din %s!\n", report_id, district_id);
+    printf("Info: Raportul %d a fost sters cu succes din %s!\n", report_id, district_id);
     close(fd);
 
     char log_path[512];
@@ -408,7 +408,7 @@ int main(int argc, char *argv[])
     }
     if(role == NULL)
     {
-        fprintf(stderr, "Nu s-a specificat rolul!");
+        fprintf(stderr, "Eroare: Nu s-a specificat rolul!");
         exit(-1);
     }
 
@@ -419,7 +419,7 @@ int main(int argc, char *argv[])
 
     if(command == NULL)
     {
-        fprintf(stderr, "Nu s-a dat o comanda!");
+        fprintf(stderr, "Eroare: Nu s-a dat o comanda!");
         exit(-1);
     }
 
@@ -427,7 +427,7 @@ int main(int argc, char *argv[])
     {
         if(arg_index + 1 >= argc)
         {
-            fprintf(stderr, "Lipseste district ID!");
+            fprintf(stderr, "Eroare: Lipseste district ID!");
             exit(-1);
         }
         char *ID = argv[arg_index + 1];
@@ -437,7 +437,7 @@ int main(int argc, char *argv[])
     {
         if(arg_index + 1 >= argc)
         {
-            fprintf(stderr, "Lipseste district ID!");
+            fprintf(stderr, "Eroare: Lipseste district ID!");
             exit(-1);
         }
         command_list(argv[arg_index + 1], role);
@@ -446,7 +446,7 @@ int main(int argc, char *argv[])
     {
         if(arg_index + 2 >= argc)
         {
-            fprintf(stderr, "Lipseste district ID si report ID!");
+            fprintf(stderr, "Eroare: Lipseste district ID si report ID!");
             exit(-1);
         }
         char *ID = argv[arg_index + 1];
@@ -457,7 +457,7 @@ int main(int argc, char *argv[])
     {
         if(arg_index + 2 >= argc)
         {
-            fprintf(stderr, "Lipseste district ID si report ID!");
+            fprintf(stderr, "Eroare: Lipseste district ID si report ID!");
             exit(-1);
         }
         char *ID = argv[arg_index + 1];
