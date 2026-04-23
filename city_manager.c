@@ -255,6 +255,60 @@ void command_list(char *district_id, char *role)
     close(fd);
 }
 
+void command_view(char *district_id, int report_id, char *role)
+{
+    char path[512];
+    snprintf(path, 512, "%s/reports.dat", district_id); // creem path
+    struct stat st = {0};
+    if(stat(path, &st) == -1)
+    {
+        fprintf(stderr, "Eroare la deschiderea reports.dat!");
+        exit(-1);
+    }
+
+    if(check_permission(st.st_mode, role, 'R') == 0) // verificam daca are permisiune
+    {
+        fprintf(stderr, "Rolul %s nu are dreptul de a citi rapoarte! (--view)!\n", role);
+        exit(-1);
+    }
+
+    if(report_id <= 0 || (report_id * sizeof(Raport)) > st.st_size) // verificam daca raportul exista
+    {
+        fprintf(stderr, "Eroare, raportul cu ID %d nu exista in districtul %s\n", report_id, district_id);
+        exit(-1);
+    }
+    int fd = open(path, O_RDONLY);
+    if(fd < 0)
+    {
+        fprintf(stderr, "Eroare la deschiderea reports.dat!");
+        exit(-1);
+    }
+
+    off_t offset = (report_id - 1) * sizeof(Raport); // calculam offest in fisier
+    if(lseek(fd, offset, SEEK_SET) == (off_t)-1)
+    {
+        fprintf(stderr, "Eroare la lseek!\n");
+        close(fd);
+        exit(-1);
+    }
+
+    Raport r;
+    if(read(fd, &r, sizeof(Raport)) == sizeof(Raport))
+    {
+        printf(" > DETALII PENTRU RAPORTUL: %d <\n", r.ID);
+        printf("Inspector: %s\n", r.inspectorName);
+        printf("Cat: %s\n", r.category);
+        printf("Sev: %d\n", r.severity);
+        printf("Coordonate: (%.2f, %.2f)\n", r.latitude, r.longitude);
+        printf("Timestamp: %s\n", ctime(&r.timestamp));
+        printf("Description: %s\n", r.description);
+        printf("\n\n");
+    }
+    else
+        fprintf(stderr, "Eroare la citirea raportului!\n");
+    close(fd);
+}
+
 int main(int argc, char *argv[])
 {
     srand(time(NULL));
@@ -318,6 +372,17 @@ int main(int argc, char *argv[])
             exit(-1);
         }
         command_list(argv[arg_index + 1], role);
+    }
+    else if(strcmp(command, "--view") == 0)
+    {
+        if(arg_index + 2 >= argc)
+        {
+            fprintf(stderr, "Lipseste district ID si report ID!");
+            exit(-1);
+        }
+        char *ID = argv[arg_index + 1];
+        int report_id = atoi(argv[arg_index + 2]);
+        command_view(ID, report_id, role);
     }
     return 0;
 }
