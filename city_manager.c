@@ -277,7 +277,7 @@ void command_view(char *district_id, int report_id, char *role)
         fprintf(stderr, "Eroare, raportul cu ID %d nu exista in districtul %s\n", report_id, district_id);
         exit(-1);
     }
-    int fd = open(path, O_RDONLY);
+    int fd = open(path, O_RDONLY); // verificam daca s a deschis cum trebuie
     if(fd < 0)
     {
         fprintf(stderr, "Eroare la deschiderea reports.dat!");
@@ -285,7 +285,7 @@ void command_view(char *district_id, int report_id, char *role)
     }
 
     off_t offset = (report_id - 1) * sizeof(Raport); // calculam offest in fisier
-    if(lseek(fd, offset, SEEK_SET) == (off_t)-1)
+    if(lseek(fd, offset, SEEK_SET) == (off_t)-1) // verificam daca s a pus cursorul bine
     {
         fprintf(stderr, "Eroare la lseek!\n");
         close(fd);
@@ -307,6 +307,75 @@ void command_view(char *district_id, int report_id, char *role)
     else
         fprintf(stderr, "Eroare la citirea raportului!\n");
     close(fd);
+}
+
+void command_remove_report(char *district_id, int report_id, char *role, char *user)
+{
+    if(strcmp(role, "manager") != 0)
+    {
+        fprintf(stderr, "Acces respins: doar managerul poate sa stearga rapoarte!\n");
+        exit(-1);
+    }
+
+    char path[512];
+    snprintf(path, 512, "%s/reports.dat", district_id);
+    struct stat st = {0};
+    if(stat(path, &st) == -1)
+    {
+        fprintf(stderr, "Eroare la deschiderea reports.dat!");
+        exit(-1);
+    }
+
+    if(check_permission(st.st_mode, role, 'W') == 0)
+    {
+        fprintf(stderr, "Rolul %s nu are permisiune de a scrie in reports.dat!\n", role);
+        exit(-1);
+    }
+
+    if(report_id <= 0 || (report_id * sizeof(Raport)) > st.st_size)
+    {
+        fprintf(stderr, "Raportul cu ID %d nu exista!\n", report_id);
+        exit(-1);
+    }
+
+    int fd = open(path, O_RDWR);
+    if(fd < 0)
+    {
+        fprintf(stderr, "Eroare la deschiderea reports.dat!");
+        exit(-1);
+    }
+
+    int total_reports = st.st_size / sizeof(Raport);
+    Raport r;
+    for(int i = report_id; i < total_reports; i++)
+    {
+        lseek(fd, i * sizeof(Raport), SEEK_SET); // trecem la urmatorul raport
+        read(fd, &r, sizeof(Raport)); // citim datele din el si le salvam in r
+        r.ID--; // ii scadem indexul
+        lseek(fd, (i-1) * sizeof(Raport), SEEK_SET); // trecem la raportul pe care il stergem
+        write(fd, &r, sizeof(Raport)); // suprascriem
+    }
+    off_t new_size = (total_reports - 1) * sizeof(Raport);
+    if(ftruncate(fd, new_size) == -1)
+    {
+        fprintf(stderr, "Eroare la trunchierea fisierului!\n");
+        close(fd);
+        exit(-1);
+    }
+    printf("Raportul %d a fost sters cu succes din %s!\n", report_id, district_id);
+    close(fd);
+
+    char log_path[512];
+    snprintf(log_path, 512, "%s/logged_district", district_id);
+
+    int fd_log = open(log_path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if(fd_log >= 0)
+    {
+        char log_entry[256];
+        snprintf(log_entry, sizeof(log_entry), "%ld\n%s\n%s remove %d\n", (long)time(NULL), user, role, report_id);
+        write(fd_log, log_entry, strlen(log_entry));
+        close(fd_log);
+    }
 }
 
 int main(int argc, char *argv[])
@@ -383,6 +452,17 @@ int main(int argc, char *argv[])
         char *ID = argv[arg_index + 1];
         int report_id = atoi(argv[arg_index + 2]);
         command_view(ID, report_id, role);
+    }
+    else if(strcmp(command, "--remove_report") == 0)
+    {
+        if(arg_index + 2 >= argc)
+        {
+            fprintf(stderr, "Lipseste district ID si report ID!");
+            exit(-1);
+        }
+        char *ID = argv[arg_index + 1];
+        int report_id = atoi(argv[arg_index + 2]);
+        command_remove_report(ID, report_id, role, user);
     }
     return 0;
 }
