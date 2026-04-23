@@ -148,7 +148,7 @@ void command_add(char *district_id, char *role, char *user)
 
     r.severity = (rand() % 3) + 1;
 
-    printf("Description: "); getchar();
+    printf("Description: ");
     fgets(r.description, description_len, stdin);
     r.description[strlen(r.description) - 1] = '\0';
 
@@ -229,6 +229,7 @@ void command_list(char *district_id, char *role)
     if(check_permission(st.st_mode, role, 'R') == 0)
     {
         fprintf(stderr, "Rolul %s nu are dreptul de a citi rapoartele (--list)!\n", role);
+        exit(-1);
     }
     char perm_str[11];
     get_permissions_string(st.st_mode, perm_str);
