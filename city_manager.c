@@ -22,11 +22,90 @@ typedef struct
     char description[description_len];
 } Raport;
 
+void get_permissions_string(mode_t mode, char *str)
+{
+    strcpy(str, "---------");
+    // permisiuni owner
+    if (mode & S_IRUSR) str[0] = 'r';
+    if (mode & S_IWUSR) str[1] = 'w';
+    if (mode & S_IXUSR) str[2] = 'x';
+
+    // permisiuni grup
+    if (mode & S_IRGRP) str[3] = 'r';
+    if (mode & S_IWGRP) str[4] = 'w';
+    if (mode & S_IXGRP) str[5] = 'x';
+
+    // others
+    if (mode & S_IROTH) str[6] = 'r';
+    if (mode & S_IWOTH) str[7] = 'w';
+    if (mode & S_IXOTH) str[8] = 'x';
+
+    str[9] = '\0';
+}
+
+int check_permission(mode_t mode, char *role, char access_type) // functie pt a verifica accesul de scriere/citire
+{
+    if(strcmp(role, "manager") == 0)
+    {
+        if(access_type == 'R')
+        {
+            if(mode & S_IRUSR)
+                return 1;
+            else
+                return 0;
+        }
+        else if(access_type == 'W')
+        {
+            if(mode & S_IWUSR)
+                return 1;
+            else
+                return 0;
+        }
+        else if(access_type == 'X')
+        {
+            if(mode & S_IXUSR)
+                return 1;
+            else
+                return 0;
+        }
+    }
+    else if(strcmp(role, "inspector") == 0)
+    {
+        if(access_type == 'R')
+        {
+            if(mode & S_IRGRP)
+                return 1;
+            else
+                return 0;
+        }
+        else if(access_type == 'W')
+        {
+            if(mode & S_IWGRP)
+                return 1;
+            else
+                return 0;
+        }
+        else if(access_type == 'X')
+        {
+            if(mode & S_IXGRP)
+                return 1;
+            else
+                return 0;
+        }
+    }
+    return 0;
+}
+
 void command_add(char *district_id, char *role, char *user)
 {
     struct stat st = {0};
     if(stat(district_id, &st) == -1) // verificam daca exista directorul
     {
+        if(strcmp(role, "manager") != 0)
+        {
+            fprintf(stderr, "Eroare: Cartierul %s nu exista! Doar un manager poate crea fisierele .cfg si .log!!!!", district_id);
+            exit(-1);
+        }
         if(mkdir(district_id, 0750) == -1) // creez directorul
         {
             fprintf(stderr, "Eroare la crearea directorului!");
@@ -78,7 +157,14 @@ void command_add(char *district_id, char *role, char *user)
 
     struct stat file_st = {0};
     if(stat(path, &file_st) == 0)
+    {
+        if(check_permission(file_st.st_mode, role, 'W') == 0)
+        {
+            fprintf(stderr, "Rolul %s nu are permisiunea de a scrie in reports.dat!\n", role);
+            exit(-1);
+        }
         r.ID = (file_st.st_size / sizeof(Raport)) + 1; // daca exista calculam ID automat
+    }
     else
         r.ID = 1; // daca nu, il punem pe 1
 
@@ -95,30 +181,40 @@ void command_add(char *district_id, char *role, char *user)
         printf("Raportul a fost salvat cu succes in %s.\n", path);
 
     close(fd);
+
+    // creere si logged_district
+    char log_path[512];
+    snprintf(log_path, 512, "%s/logged_district", district_id);
+
+    struct stat log_st = {0};
+    if(stat(log_path, &log_st) == 0) // verificam daca deja exiata logul
+    {
+        if(check_permission(log_st.st_mode, role, 'W') == 0) // verificam permisiunea de scriere
+        {
+            fprintf(stderr, "Rolul %s nu are permisiune de a scrie in fisierul logged_district!", role);
+            return;
+        }
+    }
+    else
+    {    //daca nu exista fisierul log, doar un manager il poate crea
+        if(strcmp(role, "manager") != 0)
+        {
+            fprintf(stderr, "Rolul %s nu are permisiune de a scrie in fisierul logged_district!", role);
+            return;
+        }
+    }
+    int fd_log = open(log_path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (fd_log >= 0)
+    {
+        char log_entry[256];
+        snprintf(log_entry, sizeof(log_entry), "%ld\n%s\n%s add\n", (long)time(NULL), user, role);
+        write(fd_log, log_entry, strlen(log_entry));
+        close(fd_log);
+        chmod(log_path, 0644);
+    }
 }
 
-void get_permissions_string(mode_t mode, char *str)
-{
-    strcpy(str, "---------");
-    // permisiuni owner
-    if (mode & S_IRUSR) str[0] = 'r';
-    if (mode & S_IWUSR) str[1] = 'w';
-    if (mode & S_IXUSR) str[2] = 'x';
-
-    // permisiuni grup
-    if (mode & S_IRGRP) str[3] = 'r';
-    if (mode & S_IWGRP) str[4] = 'w';
-    if (mode & S_IXGRP) str[5] = 'x';
-
-    // others
-    if (mode & S_IROTH) str[6] = 'r';
-    if (mode & S_IWOTH) str[7] = 'w';
-    if (mode & S_IXOTH) str[8] = 'x';
-
-    str[9] = '\0';
-}
-
-void command_list(char *district_id)
+void command_list(char *district_id, char *role)
 {
     char path[512];
     snprintf(path, 512, "%s/reports.dat", district_id); // cale spre fisierul reports.dat
@@ -130,6 +226,10 @@ void command_list(char *district_id)
         exit(-1);
     }
 
+    if(check_permission(st.st_mode, role, 'R') == 0)
+    {
+        fprintf(stderr, "Rolul %s nu are dreptul de a citi rapoartele (--list)!\n", role);
+    }
     char perm_str[11];
     get_permissions_string(st.st_mode, perm_str);
 
@@ -216,7 +316,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Lipseste district ID!");
             exit(-1);
         }
-        command_list(argv[arg_index + 1]);
+        command_list(argv[arg_index + 1], role);
     }
     return 0;
 }
