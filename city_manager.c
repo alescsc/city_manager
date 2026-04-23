@@ -182,6 +182,18 @@ void command_add(char *district_id, char *role, char *user)
 
     close(fd);
 
+    // link simbolic
+    char symlink_name[512];
+    snprintf(symlink_name, sizeof(symlink_name), "active_reports-%s", district_id);
+
+    if(access(symlink_name, F_OK) == -1) // verificam daca exista fisierul indiferent de ce drepturi avem
+    {
+        if(symlink(path, symlink_name) == -1) // crearea efectiva a linkului
+            fprintf(stderr, "Eroare: Crearea link-ului simbolic a esuat!\n");
+        else
+            printf("Info: Link-ul simbolic %s a fost creat!\n", symlink_name);
+    }
+
     // creere si logged_district
     char log_path[512];
     snprintf(log_path, 512, "%s/logged_district", district_id);
