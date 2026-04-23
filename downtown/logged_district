@@ -1,0 +1,21 @@
+1776965938
+alice
+manager add
+1776966041
+alice
+manager add
+1776975932
+alice
+manager add
+1776975938
+alice
+manager add
+1776975949
+alice
+manager add
+1776975978
+alice
+manager remove 3
+1776979977
+alice
+manager update_threshold 3
