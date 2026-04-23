@@ -38,6 +38,19 @@ void command_add(char *district_id, char *role, char *user)
             exit(-1);
         }
         printf("Directorul %s a fost creat cu succes!\n", district_id);
+
+        char cfg_path[512]; // implementam si district.cfg
+        snprintf(cfg_path, 512, "%s/district.cfg", district_id);
+
+        int fd_cfg = open(cfg_path, O_WRONLY | O_CREAT | O_TRUNC, 0640);
+        if(fd_cfg >= 0)
+        {
+            char *default_threshold = "2\n";
+            write(fd_cfg, default_threshold, strlen(default_threshold));
+            close(fd_cfg);
+            chmod(cfg_path, 0640);
+            printf("Fisierul district.cfg a fost creat!\n");
+        }
     }
     else
     {
@@ -45,7 +58,6 @@ void command_add(char *district_id, char *role, char *user)
     }
 
     Raport r;
-    r.ID = 1;
     strcpy(r.inspectorName, user);
     r.timestamp = time(NULL);
 
@@ -63,6 +75,12 @@ void command_add(char *district_id, char *role, char *user)
 
     char path[512];
     snprintf(path, 512, "%s/reports.dat", district_id); // cale spre fisierul reports.dat
+
+    struct stat file_st = {0};
+    if(stat(path, &file_st) == 0)
+        r.ID = (file_st.st_size / sizeof(Raport)) + 1; // daca exista calculam ID automat
+    else
+        r.ID = 1; // daca nu, il punem pe 1
 
     int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0664);
     if(fd < 0)
