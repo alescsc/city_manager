@@ -81,14 +81,46 @@ int check_permission(mode_t mode, char *role, char access_type) // functie pt a 
     return 0;
 }
 
+void log_event(char *district_id, char *user, char *role, char *command)
+{
+    char log_path[512];
+    snprintf(log_path, 512, "%s/logged_district", district_id);
+
+    struct stat log_st = {0};
+    if(stat(log_path, &log_st) == 0)
+    {
+        if(check_permission(log_st.st_mode, role, 'W') == 0)
+        {
+            fprintf(stderr, "Eroare: Rolul %s nu are drept de a scrie in log!\n", role);
+            return;
+        }
+    }
+    else
+        if(strcmp(role, "manager") != 0)
+        {
+            fprintf(stderr, "Eroare: Rolul %s nu are drept de a crea fisierul log!\n", role);
+            return;
+        }
+
+    int fd = open(log_path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if(fd >= 0)
+    {
+        char log_entry[512];
+        snprintf(log_entry, sizeof(log_entry), "%ld\n%s\n%s\n%s\n", (long)time(NULL), user, role, command);
+        write(fd, log_entry, strlen(log_entry));
+        close(fd);
+        chmod(log_path, 0644);
+    }
+}
+
 void validate_symlink(char *district_id) // verificam daca symlink e corect
 {
     struct stat link_info;
     char link_path[512];
-    snprintf(link_path, sizeof(link_path), "active_reports-%s", district_id);
+    snprintf(link_path, sizeof(link_path), "active_reports-%s", district_id); // aflam pathul
     if(lstat(link_path, &link_info) == 0)
     {
-        if(S_ISLNK(link_info.st_mode))
+        if(S_ISLNK(link_info.st_mode)) // vedem daca e link
         {
             struct stat target_info;
             if(stat(link_path, &target_info) == -1)
@@ -196,39 +228,10 @@ void command_add(char *district_id, char *role, char *user)
             printf("Info: Link-ul simbolic %s a fost creat!\n", symlink_name);
     }
 
-    // creare si logged_district
-    char log_path[512];
-    snprintf(log_path, 512, "%s/logged_district", district_id);
-
-    struct stat log_st = {0};
-    if(stat(log_path, &log_st) == 0) // verificam daca deja exiata logul
-    {
-        if(check_permission(log_st.st_mode, role, 'W') == 0) // verificam permisiunea de scriere
-        {
-            fprintf(stderr, "Eroare: Rolul %s nu are permisiune de a scrie in fisierul logged_district!", role);
-            return;
-        }
-    }
-    else
-    {    //daca nu exista fisierul log, doar un manager il poate crea
-        if(strcmp(role, "manager") != 0)
-        {
-            fprintf(stderr, "Eroare: Rolul %s nu are permisiune de a scrie in fisierul logged_district!", role);
-            return;
-        }
-    }
-    int fd_log = open(log_path, O_WRONLY | O_CREAT | O_APPEND, 0644);
-    if (fd_log >= 0)
-    {
-        char log_entry[256];
-        snprintf(log_entry, sizeof(log_entry), "%ld\n%s\n%s add\n", (long)time(NULL), user, role);
-        write(fd_log, log_entry, strlen(log_entry));
-        close(fd_log);
-        chmod(log_path, 0644);
-    }
+    log_event(district_id, user, role, "add");
 }
 
-void command_list(char *district_id, char *role)
+void command_list(char *district_id, char *role, char *user)
 {
     char path[512];
     snprintf(path, 512, "%s/reports.dat", district_id); // cale spre fisierul reports.dat
@@ -267,9 +270,10 @@ void command_list(char *district_id, char *role)
     }
 
     close(fd);
+    log_event(district_id, user, role, "list");
 }
 
-void command_view(char *district_id, int report_id, char *role)
+void command_view(char *district_id, int report_id, char *role, char *user)
 {
     char path[512];
     snprintf(path, 512, "%s/reports.dat", district_id); // creem path
@@ -321,6 +325,7 @@ void command_view(char *district_id, int report_id, char *role)
     else
         fprintf(stderr, "Eroare: Citirea raportului!\n");
     close(fd);
+    log_event(district_id, user, role, "view");
 }
 
 void command_remove_report(char *district_id, int report_id, char *role, char *user)
@@ -379,17 +384,7 @@ void command_remove_report(char *district_id, int report_id, char *role, char *u
     printf("Info: Raportul %d a fost sters cu succes din %s!\n", report_id, district_id);
     close(fd);
 
-    char log_path[512];
-    snprintf(log_path, 512, "%s/logged_district", district_id);
-
-    int fd_log = open(log_path, O_WRONLY | O_CREAT | O_APPEND, 0644);
-    if(fd_log >= 0)
-    {
-        char log_entry[256];
-        snprintf(log_entry, sizeof(log_entry), "%ld\n%s\n%s remove %d\n", (long)time(NULL), user, role, report_id);
-        write(fd_log, log_entry, strlen(log_entry));
-        close(fd_log);
-    }
+    log_event(district_id, user, role, "remove_report");
 }
 
 void command_update_threshold(char *district_id, int new_threshold, char *role, char *user)
@@ -443,17 +438,7 @@ void command_update_threshold(char *district_id, int new_threshold, char *role, 
         printf("Info: Pragul pentru districtul %s a fost actualizat la %d!\n", district_id, new_threshold);
 
     close(fd_cfg);
-
-    char log_path[512];
-    snprintf(log_path, 512, "%s/logged_district", district_id);
-    int fd_log = open(log_path, O_WRONLY | O_CREAT | O_APPEND, 0644);
-    if(fd_log >= 0)
-    {
-        char log_entry[256];
-        snprintf(log_entry, sizeof(log_entry), "%ld\n%s\n%s update_threshold %d\n", (long)time(NULL), user, role, new_threshold);
-        write(fd_log, log_entry, strlen(log_entry));
-        close(fd_log);
-    }
+    log_event(district_id, user, role, "update_threshold");
 }
 
 int parse_condition(char *input, char *field, char *op, char *value) // functia pentru citirea conditiei de la filter generata cu AI
@@ -495,7 +480,7 @@ int match_condition(Raport *r, char *field, char *op, char *value)
     return 0;
 }
 
-void command_filter(char *district_id, char *condition, char *role)
+void command_filter(char *district_id, char *condition, char *role, char *user)
 {
     char field[50], op[10], value[50];
     if(parse_condition(condition, field, op, value) == 0)
@@ -544,6 +529,7 @@ void command_filter(char *district_id, char *condition, char *role)
     if(gasit == 0)
            printf("Info: Nu exista niciun raport care indeplineste conditia specificata!\n");
     close(fd);
+    log_event(district_id, user, role, "filter");
 }
 
 int main(int argc, char *argv[])
@@ -609,7 +595,7 @@ int main(int argc, char *argv[])
             exit(-1);
         }
         validate_symlink(argv[arg_index + 1]);
-        command_list(argv[arg_index + 1], role);
+        command_list(argv[arg_index + 1], role, user);
     }
     else if(strcmp(command, "--view") == 0)
     {
@@ -621,7 +607,7 @@ int main(int argc, char *argv[])
         char *ID = argv[arg_index + 1];
         int report_id = atoi(argv[arg_index + 2]);
         validate_symlink(ID);
-        command_view(ID, report_id, role);
+        command_view(ID, report_id, role, user);
     }
     else if(strcmp(command, "--remove_report") == 0)
     {
@@ -657,7 +643,7 @@ int main(int argc, char *argv[])
         char *ID = argv[arg_index + 1];
         char *conditie = argv[arg_index + 2];
         validate_symlink(ID);
-        command_filter(ID, conditie, role);
+        command_filter(ID, conditie, role, user);
     }
     return 0;
 }

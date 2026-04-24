@@ -6,8 +6,8 @@
 Pentru această secțiune a proiectului, am folosit asistentul AI **Google Gemini**.
 
 ### 2. Prompt-urile Oferite
-Interacțiunea a pornit după ce am implementat manual restul comenzilor *(--add, --list, --view, --remove_report)*. I-am oferit AI-ului codul meu scris până în acel punct și structura de date Raport, alături de următorul prompt:
-* *"am implementat toate functiile pe langa --filter [...] acum as mai avea sa fac functia filter la care sunt cele doua functii la care necesita asistenta AI de acolo pe care sincer nu le prea inteleg ma poti ajuta si explica?"*
+Interacțiunea a pornit după ce am implementat manual restul comenzilor *(--add, --list, --view, --remove_report, --update_threshold)*. I-am oferit AI-ului codul meu scris până în acel punct și structura de date Raport, alături de următorul prompt:
+* *"am creat pana acum toate functiile de care aveam nevoie, insa la cea de filter am nevoie de asistenta AI. poti sa imi explici si sa generezi codul pentru parse_condition si match_condition"*
 
 
 ### 3. Ce a fost generat
@@ -16,7 +16,7 @@ Inițial, AI-ul a generat cele două funcții standard cerute de specificații:
 2. match_condition: O funcție masivă care verifica pe rând fiecare câmp *(severity, timestamp, category, inspector)* și implementa manual toate cele 6 verificări de operatori logici (`==`, `!=`, `<`, `<=`, `>`, `>=`) pentru fiecare câmp numeric în parte, convertind string-urile cu atoi() și atol().
 
 ### 4. Ce am schimbat și de ce
-Deși codul generat inițial era funcțional, **am decis să îl modific** pentru a fi mai ușor de înțeles.
+Deși codul generat inițial era funcțional, **am decis să îl modific** pentru a fi mai ușor de înțeles și a nu se repeta.
 * **Extragerea logicii:** Am observat că blocul imens de if-uri pentru operatorii matematici se repeta identic și pentru severity și pentru timestamp. Astfel, am creat eu o funcție separată, `cmp_numeric(long long val_raport, long long val_filtru, const char *op)`.
 * **Alegerea tipului de date:** Am folosit **long long** ca argument pentru cmp_numeric astfel încât să o pot refolosi în siguranță atât pentru numere mici de 32 de biți *(severity tip int)*, cât și pentru numere mari de 64 de biți *(timestamp tip time_t)*, evitând un posibil *overflow*.
 
