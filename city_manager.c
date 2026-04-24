@@ -96,6 +96,24 @@ int check_permission(mode_t mode, char *role, char access_type) // functie pt a 
     return 0;
 }
 
+void validate_symlink(char *district_id) // verificam daca symlink e corect
+{
+    struct stat link_info;
+    char link_path[512];
+    snprintf(link_path, sizeof(link_path), "active_reports-%s", district_id);
+    if(lstat(link_path, &link_info) != 0)
+    {
+        if(S_ISLNK(link_info.st_mode))
+        {
+            struct stat target_info;
+            if(stat(link_path, &target_info) == -1)
+                fprintf(stderr, "WARNING: Linkul simbolic %s e dangling!\n", link_path);
+            else
+                printf("Info: Linkul simbolic %s e valid!\n", link_path);
+        }
+    }
+}
+
 void command_add(char *district_id, char *role, char *user)
 {
     struct stat st = {0};
@@ -606,6 +624,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Eroare: Lipseste district ID!");
             exit(-1);
         }
+        validate_symlink(argv[arg_index + 1]);
         command_list(argv[arg_index + 1], role);
     }
     else if(strcmp(command, "--view") == 0)
