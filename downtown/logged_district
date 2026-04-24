@@ -19,3 +19,6 @@ manager remove 3
 1776979977
 alice
 manager update_threshold 3
+1777026166
+alice
+manager add
