@@ -101,13 +101,16 @@ void validate_symlink(char *district_id) // verificam daca symlink e corect
     struct stat link_info;
     char link_path[512];
     snprintf(link_path, sizeof(link_path), "active_reports-%s", district_id);
-    if(lstat(link_path, &link_info) != 0)
+    if(lstat(link_path, &link_info) == 0)
     {
         if(S_ISLNK(link_info.st_mode))
         {
             struct stat target_info;
             if(stat(link_path, &target_info) == -1)
+            {
                 fprintf(stderr, "WARNING: Linkul simbolic %s e dangling!\n", link_path);
+                unlink(link_path);
+            }
             else
                 printf("Info: Linkul simbolic %s e valid!\n", link_path);
         }
@@ -636,6 +639,7 @@ int main(int argc, char *argv[])
         }
         char *ID = argv[arg_index + 1];
         int report_id = atoi(argv[arg_index + 2]);
+        validate_symlink(ID);
         command_view(ID, report_id, role);
     }
     else if(strcmp(command, "--remove_report") == 0)
@@ -647,6 +651,7 @@ int main(int argc, char *argv[])
         }
         char *ID = argv[arg_index + 1];
         int report_id = atoi(argv[arg_index + 2]);
+        validate_symlink(ID);
         command_remove_report(ID, report_id, role, user);
     }
     else if(strcmp(command, "--update_threshold") == 0)
@@ -658,6 +663,7 @@ int main(int argc, char *argv[])
         }
         char *ID = argv[arg_index + 1];
         int valoare = atoi(argv[arg_index + 2]);
+        validate_symlink(ID);
         command_update_threshold(ID, valoare, role, user);
     }
     else if(strcmp(command, "--filter") == 0)
@@ -669,6 +675,7 @@ int main(int argc, char *argv[])
         }
         char *ID = argv[arg_index + 1];
         char *conditie = argv[arg_index + 2];
+        validate_symlink(ID);
         command_filter(ID, conditie, role);
     }
     return 0;
