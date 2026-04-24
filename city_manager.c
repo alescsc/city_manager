@@ -447,6 +447,45 @@ void command_update_threshold(char *district_id, int new_threshold, char *role, 
     }
 }
 
+int parse_condition(char *input, char *field, char *op, char *value) // functia pentru citirea conditiei de la filter generata cu AI
+{
+    if(sscanf(input, "%[^:]:%[^:]:%s", field, op, value) == 3)
+        return 1;
+    return 0;
+}
+
+int cmp_numeric(long long val_raport, long long val_filtru, char *op)
+{
+    if(strcmp(op, "==") == 0) return val_raport == val_filtru;
+    if(strcmp(op, "!=") == 0) return val_raport != val_filtru;
+    if(strcmp(op, "<") == 0) return val_raport < val_filtru;
+    if(strcmp(op, "<=") == 0) return val_raport <= val_filtru;
+    if(strcmp(op, ">") == 0) return val_raport > val_filtru;
+    if(strcmp(op, ">=") == 0) return val_raport >= val_filtru;
+
+    return 0;
+}
+
+int match_condition(Raport *r, char *field, char *op, char *value)
+{
+    if(strcmp(field, "severity") == 0)
+        return cmp_numeric(r->severity, atol(value), op);
+    else if(strcmp(field, "timestamp") == 0)
+        return cmp_numeric(r->timestamp, atol(value), op);
+    else if(strcmp(field, "category") == 0)
+    {
+        if(strcmp(op, "==") == 0) return strcmp(r->category, value) == 0;
+        if(strcmp(op, "!=") == 0) return strcmp(r->category, value) != 0;
+    }
+    else if(strcmp(field, "inspector") == 0)
+    {
+        if(strcmp(op, "==") == 0) return strcmp(r->inspectorName, value) == 0;
+        if(strcmp(op, "!=") == 0) return strcmp(r->inspectorName, value) != 0;
+    }
+
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     srand(time(NULL));
