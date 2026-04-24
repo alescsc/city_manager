@@ -413,6 +413,13 @@ void command_update_threshold(char *district_id, int new_threshold, char *role, 
         fprintf(stderr, "Eroare: Fisierul district.cfg nu exista in districtul %s!\n", district_id);
         exit(-1);
     }
+
+    if((st.st_mode & 0777) != 0640)
+    {
+        fprintf(stderr, "Eroare: Permisiunile fisierului district.cfg au fost modificate (nu mai sunt 640)!\n");
+        exit(-1);
+    }
+
     if(check_permission(st.st_mode, role, 'W') == 0)
     {
         fprintf(stderr, "Eroare: Rolul %s nu are permisiune de a scrie in district.cfg!\n", role);
