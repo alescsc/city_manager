@@ -29,17 +29,14 @@ void get_permissions_string(mode_t mode, char *str)
     if (mode & S_IRUSR) str[0] = 'r';
     if (mode & S_IWUSR) str[1] = 'w';
     if (mode & S_IXUSR) str[2] = 'x';
-
     // permisiuni grup
     if (mode & S_IRGRP) str[3] = 'r';
     if (mode & S_IWGRP) str[4] = 'w';
     if (mode & S_IXGRP) str[5] = 'x';
-
     // others
     if (mode & S_IROTH) str[6] = 'r';
     if (mode & S_IWOTH) str[7] = 'w';
     if (mode & S_IXOTH) str[8] = 'x';
-
     str[9] = '\0';
 }
 
@@ -49,48 +46,36 @@ int check_permission(mode_t mode, char *role, char access_type) // functie pt a 
     {
         if(access_type == 'R')
         {
-            if(mode & S_IRUSR)
-                return 1;
-            else
-                return 0;
+            if(mode & S_IRUSR) return 1;
+            else return 0;
         }
         else if(access_type == 'W')
         {
-            if(mode & S_IWUSR)
-                return 1;
-            else
-                return 0;
+            if(mode & S_IWUSR) return 1;
+            else return 0;
         }
         else if(access_type == 'X')
         {
-            if(mode & S_IXUSR)
-                return 1;
-            else
-                return 0;
+            if(mode & S_IXUSR) return 1;
+            else return 0;
         }
     }
     else if(strcmp(role, "inspector") == 0)
     {
         if(access_type == 'R')
         {
-            if(mode & S_IRGRP)
-                return 1;
-            else
-                return 0;
+            if(mode & S_IRGRP) return 1;
+            else return 0;
         }
         else if(access_type == 'W')
         {
-            if(mode & S_IWGRP)
-                return 1;
-            else
-                return 0;
+            if(mode & S_IWGRP) return 1;
+            else return 0;
         }
         else if(access_type == 'X')
         {
-            if(mode & S_IXGRP)
-                return 1;
-            else
-                return 0;
+            if(mode & S_IXGRP) return 1;
+            else return 0;
         }
     }
     return 0;
@@ -160,15 +145,11 @@ void command_add(char *district_id, char *role, char *user)
     Raport r;
     strcpy(r.inspectorName, user);
     r.timestamp = time(NULL);
-
     r.latitude = (float)(rand() % 90);
     r.longitude = (float)(rand() % 180);
-
     char *categories[] = {"road", "lighting", "flooding", "other"};
     strcpy(r.category, categories[rand() % 4]);
-
     r.severity = (rand() % 3) + 1;
-
     printf("Description: ");
     fgets(r.description, description_len, stdin);
     r.description[strlen(r.description) - 1] = '\0';
