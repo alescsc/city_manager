@@ -194,7 +194,7 @@ void command_add(char *district_id, char *role, char *user)
             printf("Info: Link-ul simbolic %s a fost creat!\n", symlink_name);
     }
 
-    // creere si logged_district
+    // creare si logged_district
     char log_path[512];
     snprintf(log_path, 512, "%s/logged_district", district_id);
 
@@ -486,6 +486,57 @@ int match_condition(Raport *r, char *field, char *op, char *value)
     return 0;
 }
 
+void command_filter(char *district_id, char *condition, char *role)
+{
+    char field[50], op[10], value[50];
+    if(parse_condition(condition, field, op, value) == 0)
+    {
+        fprintf(stderr, "Eroare: Formatul conditiei este invalid! (--filter)\n");
+        exit(-1);
+    }
+
+    char path[512];
+    snprintf(path, 512, "%s/reports.dat", district_id);
+
+    struct stat st = {0};
+    if(stat(path, &st) == -1)
+    {
+        fprintf(stderr, "Eroare: Deschiderea raports.dat!\n");
+        exit(-1);
+    }
+
+    if(check_permission(st.st_mode, role, 'R') == 0)
+    {
+        fprintf(stderr, "Eroare: Rolul %s nu are dreptul de a citi rapoarte! (--filter)\n", role);
+        exit(-1);
+    }
+
+    int fd = open(path, O_RDONLY);
+    if(fd < 0)
+    {
+        fprintf(stderr, "Eroare: Deschiderea raports.dat!\n");
+        exit(-1);
+    }
+
+    Raport r;
+    int gasit = 0;
+    printf("> Rezultate filtrate pentru conditia %s in districtul %s <\n", condition, district_id);
+    while(read(fd, &r, sizeof(Raport)) == sizeof(Raport))
+    {
+        if(match_condition(&r, field, op, value) == 1)
+        {
+            gasit = 1;
+            printf("ID: %d | Inspector: %s | Cat: %s | Sev: %d\n", r.ID, r.inspectorName, r.category, r.severity);
+            printf("Coord: (%.2f, %.2f) | Time: %s", r.latitude, r.longitude, ctime(&r.timestamp));
+            printf("Description: %s\n", r.description);
+            printf("\n");
+        }
+    }
+    if(gasit == 0)
+           printf("Info: Nu exista niciun raport care indeplineste conditia specificata!\n");
+    close(fd);
+}
+
 int main(int argc, char *argv[])
 {
     srand(time(NULL));
@@ -582,6 +633,17 @@ int main(int argc, char *argv[])
         char *ID = argv[arg_index + 1];
         int valoare = atoi(argv[arg_index + 2]);
         command_update_threshold(ID, valoare, role, user);
+    }
+    else if(strcmp(command, "--filter") == 0)
+    {
+        if(arg_index + 2 >= argc)
+        {
+            fprintf(stderr, "Eroare: Lipsesc district ID si conditia!");
+            exit(-1);
+        }
+        char *ID = argv[arg_index + 1];
+        char *conditie = argv[arg_index + 2];
+        command_filter(ID, conditie, role);
     }
     return 0;
 }
