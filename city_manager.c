@@ -523,7 +523,39 @@ void command_filter(char *district_id, char *condition, char *role, char *user)
 
 void command_remove_district(char *district_id, char *role, char *user)
 {
+    if(strcmp(role, "manager") != 0)
+    {
+        fprintf(stderr, "Eroare: Doar managerul poate sa stearga un district!\n");
+        exit(-1);
+    }
 
+    log_event(district_id, user, role, "remove_district");
+
+    char symlink_name[512];
+    sprintf(symlink_name, sizeof(symlink_name), "active-reports-%s", district_id);
+    unlink(symlink_name);
+
+    pid_t pid = fork();
+    if(pid == -1)
+    {
+        fprintf(stderr, "Eroare: Crearea procesului (fork) a esuat!\n");
+        exit(-1);
+    }
+    else if(pid == 0)
+    {
+        execlp("rm", "rm", "-rf", district_id, NULL);
+        fprintf(stderr, "Eroare: Eroare la rm!\n");
+        exit(-1);
+    }
+    else
+    {
+        int status;
+        waitpid(pid, &status, 0);
+        if(WIFEXITED(status) && WEXITSTATUS(status) == 0)
+            printf("Info: Districtul %s a fost sters cu succes!\n", district_id);
+        else
+            fprintf(stderr, "Eroare: Eroare la stergerea districtului!\n");
+    }
 }
 
 int main(int argc, char *argv[])
