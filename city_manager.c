@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/wait.h>
 
 #define name_len 50
 #define category_len 25
@@ -95,21 +96,15 @@ void log_event(char *district_id, char *user, char *role, char *command)
             return;
         }
     }
-    else
-        if(strcmp(role, "manager") != 0)
-        {
-            fprintf(stderr, "Eroare: Rolul %s nu are drept de a crea fisierul log!\n", role);
-            return;
-        }
 
-    int fd = open(log_path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    int fd = open(log_path, O_WRONLY | O_CREAT | O_APPEND, 0664);
     if(fd >= 0)
     {
         char log_entry[512];
         snprintf(log_entry, sizeof(log_entry), "%ld\n%s\n%s\n%s\n", (long)time(NULL), user, role, command);
         write(fd, log_entry, strlen(log_entry));
         close(fd);
-        chmod(log_path, 0644);
+        chmod(log_path, 0664);
     }
 }
 
@@ -139,11 +134,6 @@ void command_add(char *district_id, char *role, char *user)
     struct stat st = {0};
     if(stat(district_id, &st) == -1) // verificam daca exista directorul
     {
-        if(strcmp(role, "manager") != 0)
-        {
-            fprintf(stderr, "Eroare: Cartierul %s nu exista! Doar un manager poate crea fisierele .cfg si .log!", district_id);
-            exit(-1);
-        }
         if(mkdir(district_id, 0750) == -1) // creez directorul
         {
             fprintf(stderr, "Eroare: Crearea directorului!");
@@ -532,6 +522,42 @@ void command_filter(char *district_id, char *condition, char *role, char *user)
     log_event(district_id, user, role, "filter");
 }
 
+void command_remove_district(char *district_id, char *role, char *user)
+{
+    if(strcmp(role, "manager") != 0)
+    {
+        fprintf(stderr, "Eroare: Doar managerul poate sa stearga un district!\n");
+        exit(-1);
+    }
+
+    log_event(district_id, user, role, "remove_district");
+
+    char symlink_name[512];
+    snprintf(symlink_name, sizeof(symlink_name), "active_reports-%s", district_id);
+    pid_t pid = fork(); // creem proces nou
+    if(pid == -1)
+    {
+        fprintf(stderr, "Eroare: Crearea procesului (fork) a esuat!\n");
+        exit(-1);
+    }
+    else if(pid == 0)
+    {
+        unlink(symlink_name); // stergem legatura
+        execlp("rm", "rm", "-rf", district_id, NULL); // stergem directorul
+        fprintf(stderr, "Eroare: Eroare la rm!\n");
+        exit(-1);
+    }
+    else
+    {
+        int status;
+        waitpid(pid, &status, 0); // punem procesul parinte sa astepte
+        if(WIFEXITED(status) && WEXITSTATUS(status) == 0) // verificam daca procesul copil s a terminat fara erori
+            printf("Info: Districtul %s a fost sters cu succes!\n", district_id);
+        else
+            fprintf(stderr, "Eroare: Eroare la stergerea districtului!\n");
+    }
+}
+
 int main(int argc, char *argv[])
 {
     srand(time(NULL));
@@ -644,6 +670,16 @@ int main(int argc, char *argv[])
         char *conditie = argv[arg_index + 2];
         validate_symlink(ID);
         command_filter(ID, conditie, role, user);
+    }
+    else if(strcmp(command, "--remove_district") == 0)
+    {
+        if(arg_index + 1 >= argc)
+        {
+            fprintf(stderr, "Eroare: Lipseste district ID!");
+            exit(-1);
+        }
+        char *ID = argv[arg_index + 1];
+        command_remove_district(ID, role, user);
     }
     return 0;
 }
