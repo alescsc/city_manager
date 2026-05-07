@@ -533,9 +533,8 @@ void command_remove_district(char *district_id, char *role, char *user)
 
     char symlink_name[512];
     sprintf(symlink_name, sizeof(symlink_name), "active-reports-%s", district_id);
-    unlink(symlink_name);
 
-    pid_t pid = fork();
+    pid_t pid = fork(); // creem proces nou
     if(pid == -1)
     {
         fprintf(stderr, "Eroare: Crearea procesului (fork) a esuat!\n");
@@ -543,15 +542,16 @@ void command_remove_district(char *district_id, char *role, char *user)
     }
     else if(pid == 0)
     {
-        execlp("rm", "rm", "-rf", district_id, NULL);
+        unlink(symlink_name); // stergem legatura
+        execlp("rm", "rm", "-rf", district_id, NULL); // stergem directorul
         fprintf(stderr, "Eroare: Eroare la rm!\n");
         exit(-1);
     }
     else
     {
         int status;
-        waitpid(pid, &status, 0);
-        if(WIFEXITED(status) && WEXITSTATUS(status) == 0)
+        waitpid(pid, &status, 0); // punem procesul parinte sa astepte
+        if(WIFEXITED(status) && WEXITSTATUS(status) == 0) // verificam daca procesul copil s a terminat fara erori
             printf("Info: Districtul %s a fost sters cu succes!\n", district_id);
         else
             fprintf(stderr, "Eroare: Eroare la stergerea districtului!\n");
