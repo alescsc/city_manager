@@ -534,6 +534,7 @@ void command_remove_district(char *district_id, char *role, char *user)
 
     char symlink_name[512];
     snprintf(symlink_name, sizeof(symlink_name), "active_reports-%s", district_id);
+
     pid_t pid = fork(); // creem proces nou
     if(pid == -1)
     {
