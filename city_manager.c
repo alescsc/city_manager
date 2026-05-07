@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 #define name_len 50
 #define category_len 25
@@ -219,6 +220,28 @@ void command_add(char *district_id, char *role, char *user)
     }
 
     log_event(district_id, user, role, "add");
+
+    // monitor_pid
+    int monitor_notified = 0;
+    int pid_fd = open(".monitor_pid", O_RDONLY);
+
+    if(pid_fd != -1)
+    {
+        char buffer[32];
+        int bytes = read(pid_fd, buffer, sizeof(buffer) - 1);
+        if(bytes > 0)
+        {
+            buffer[bytes] = '\0';
+            pid_t monitor_pid = atoi(buffer); // extragem pid
+            if(kill(monitor_pid, SIGUSR1) == 0) // trimitem SIGUSR1
+                monitor_notified = 1;
+        }
+        close(pid_fd);
+    }
+    if(monitor_notified)
+        log_event(district_id, user, role, "Monitor notificat cu succes");
+    else
+        log_event(district_id, user, role, "Eroare: Monitorul nu a fost notificat");
 }
 
 void command_list(char *district_id, char *role, char *user)
