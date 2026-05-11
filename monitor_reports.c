@@ -9,14 +9,14 @@ int running = 1;
 
 void handle_sigint(int sig)
 {
-    char *msg = "\nMONITOR: Am primit SIGINT! Se inchide programul!\n";
+    char *msg = "\n[STOP]: Am primit SIGINT! Se inchide programul!\n";
     write(STDOUT_FILENO, msg, strlen(msg));
     running = 0;
 }
 
 void handle_sigusr1(int sig)
 {
-    char *msg = "\nMONITOR: Un nou raport a fost adaugat!\n";
+    char *msg = "\n[REPORT]: Un nou raport a fost adaugat!\n";
     write(STDOUT_FILENO, msg, strlen(msg));
 }
 
@@ -31,7 +31,7 @@ int main()
 
     if(sigaction(SIGINT, &sigint_action, NULL) == -1)
     {
-        fprintf(stderr, "Eroare: Configurare SIGINT!\n");
+        fprintf(stderr, "[EROARE]: Configurare SIGINT!\n");
         exit(-1);
     }
 
@@ -42,16 +42,31 @@ int main()
 
     if(sigaction(SIGUSR1, &sigusr1_action, NULL) == -1)
     {
-        fprintf(stderr, "Eroare: Configurare SIGUSR1!\n");
+        fprintf(stderr, "[EROARE]: Configurare SIGUSR1!\n");
         exit(-1);
     }
 
     int my_pid = getpid();
 
+    int fd_check = open(".monitor_pid", O_RDONLY);
+    if(fd_check >= 0)
+    {
+        char buffer[32];
+        int bytes = read(fd_check, buffer, sizeof(buffer) - 1);
+        if(bytes > 0)
+        {
+            buffer[bytes] = '\0';
+            printf("[EROARE]: Monitor deja pornit cu PID: %s", buffer);
+            fflush(stdout);
+        }
+        close(fd_check);
+        exit(1);
+    }
+
     int fd = open(".monitor_pid", O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if(fd < 0)
     {
-        fprintf(stderr, "Eroare: Creare fisier .monitor_pid!\n");
+        fprintf(stderr, "[EROARE]: Creare fisier .monitor_pid!\n");
         exit(-1);
     }
 
@@ -60,15 +75,19 @@ int main()
     write(fd, pid_str, strlen(pid_str));
     close(fd);
 
-    printf("Info: monitor_reports pornit, PID: %d\n", my_pid);
+    printf("[START]: monitor_reports pornit, PID: %d\n", my_pid);
+    fflush(stdout);
 
     while(running)
         sleep(1); // asteptam semnalul
 
     if(unlink(".monitor_pid") == -1)
-        fprintf(stderr, "Eroare: unlink fisier .monitor_pid!\n");
+        fprintf(stderr, "[EROARE]: unlink fisier .monitor_pid!\n");
     else
-        printf("Info: Fisierul .monitor_pid a fost sters!\n");
+    {
+        printf("[STOP]: Fisierul .monitor_pid a fost sters!\n");
+        fflush(stdout);
+    }
 
     return 0;
 }
