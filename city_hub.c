@@ -48,8 +48,36 @@ void exec_start_monitor()
         else
             exit(1);
     }
+}
 
+void exec_calculate_scores(char *dist)
+{
+    int pfd[2];
+    if(pipe(pfd) == -1)
+        return;
 
+    pid_t pid = fork();
+    if(pid == 0)
+    {
+        close(pfd[0]);
+        dup2(pfd[1], STDOUT_FILENO);
+        close(pfd[1]);
+        execlp("./scorer", "scorer", dist, NULL);
+        exit(1);
+    }
+    else if(pid > 0)
+    {
+        close(pfd[1]);
+        char buf[512];
+        int n;
+        while((n = read(pfd[0], buf, sizeof(buf) - 1)) > 0)
+        {
+            buf[n] = '\0';
+            printf("%s", buf);
+        }
+        close(pfd[0]);
+        waitpid(pid, NULL, 0);
+    }
 }
 
 int main()
@@ -73,6 +101,20 @@ int main()
 
         else if(strcmp(command, "start_monitor") == 0)
             exec_start_monitor();
+
+        else if(strncmp(command, "calculate_scores", 16) == 0)
+        {
+            char *token = strtok(command, " ");
+            token = strtok(NULL, " ");
+            if(token == NULL)
+                printf("[EROARE] Trebuie sa specifici un district! \n");
+            else
+                while(token != NULL)
+                {
+                    exec_calculate_scores(token);
+                    token = strtok(NULL, " ");
+                }
+        }
 
         else
             printf("Comanda necunoscuta!\n");

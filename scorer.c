@@ -71,6 +71,7 @@ int main(int argc, char *argv[])
     }
 
     fclose(f);
+    printf("-- Scoruri pentru district: %s --\n", dist);
     for(int i = 0; i < nr_inspectori; i++)
         printf("Inspector %s: Scor %d\n", array_scor[i].nume, array_scor[i].scor_total);
     return 0;
