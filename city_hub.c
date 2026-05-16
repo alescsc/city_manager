@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 #define MAX_CMD_LEN 256
 
@@ -97,7 +98,18 @@ int main()
             continue;
 
         if(strcmp(command, "exit") == 0)
+        {
+            FILE *f_pid = fopen(".monitor_pid", "r");
+            if(f_pid != NULL)
+            {
+                int m_pid;
+                if(fscanf(f_pid, "%d", &m_pid) == 1)
+                    kill(m_pid, SIGINT);
+                fclose(f_pid);
+            }
+            usleep(10000);
             break;
+        }
 
         else if(strcmp(command, "start_monitor") == 0)
             exec_start_monitor();
