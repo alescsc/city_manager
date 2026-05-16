@@ -33,12 +33,12 @@ void exec_start_monitor()
             while((bytes_read = read(pipefd[0], buffer, sizeof(buffer) - 1)) > 0)
             {
                 buffer[bytes_read] = '\0';
-                printf("\n[HUB_MONITOR] a interceptat: %s", buffer);
+                printf("[HUB_MONITOR] a interceptat: %s", buffer);
                 printf("city_hub> ");
                 fflush(stdout);
             }
             close(pipefd[0]);
-            printf("\n[HUB_MONITOR] Monitor inchis! Procesul hub_monitor se termina.\n");
+            printf("[HUB_MONITOR] Monitor inchis! Procesul hub_monitor se termina.\n");
             printf("city_hub> ");
             fflush(stdout);
 

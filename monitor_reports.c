@@ -9,14 +9,14 @@ int running = 1;
 
 void handle_sigint(int sig)
 {
-    char *msg = "\n[STOP]: Am primit SIGINT! Se inchide programul!\n";
+    char *msg = "[STOP]: Am primit SIGINT! Se inchide programul!\n";
     write(STDOUT_FILENO, msg, strlen(msg));
     running = 0;
 }
 
 void handle_sigusr1(int sig)
 {
-    char *msg = "\n[REPORT]: Un nou raport a fost adaugat!\n";
+    char *msg = "[REPORT]: Un nou raport a fost adaugat!\n";
     write(STDOUT_FILENO, msg, strlen(msg));
 }
 
