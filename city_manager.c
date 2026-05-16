@@ -687,13 +687,15 @@ int main(int argc, char *argv[])
     {
         if(arg_index + 2 >= argc)
         {
-            fprintf(stderr, "Eroare: Lipsesc district ID si conditia!");
+            fprintf(stderr, "Eroare: Lipsesc district ID si conditia!\n");
             exit(-1);
         }
         char *ID = argv[arg_index + 1];
-        char *conditie = argv[arg_index + 2];
-        validate_symlink(ID);
-        command_filter(ID, conditie, role, user);
+       for(int i = arg_index + 2; i < argc; i++)
+        {
+            validate_symlink(ID);
+            command_filter(ID, argv[i], role, user);
+        }
     }
     else if(strcmp(command, "--remove_district") == 0)
     {
